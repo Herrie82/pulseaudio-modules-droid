@@ -20,8 +20,8 @@ AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_GCC_TRADITIONAL
 
-m4_define(pa_major, `echo $VERSION | cut -d. -f1 | cut -d- -f1`)
-m4_define(pa_minor, `echo $VERSION | cut -d. -f2 | cut -d- -f1`)
+m4_define(pa_major, `pkg-config --modversion libpulse | cut -d. -f1 | cut -d- -f1`)
+m4_define(pa_minor, `pkg-config --modversion libpulse | cut -d. -f2 | cut -d- -f1`)
 m4_define(pa_module_version, `echo $VERSION | cut -d. -f3 | cut -d- -f1`)
 
 AC_SUBST(PA_MAJOR, pa_major)
@@ -183,6 +183,10 @@ PKG_CHECK_MODULES([HYBRIS], [libhardware >= 0.1.0])
 AC_SUBST(HYBRIS_CFLAGS)
 AC_SUBST(HYBRIS_LIBS)
 
+PKG_CHECK_MODULES([EVDEV], [libevdev >= 1.0])
+AC_SUBST(EVDEV_CFLAGS)
+AC_SUBST(EVDEV_LIBS)
+
 #### expat (for xml config format parsing) (optional) ####
 
 AC_ARG_ENABLE([xml],
@@ -280,24 +284,6 @@ AC_ARG_WITH(
         [modlibexecdir=$withval], [modlibexecdir="${libdir}/pulse-${PA_MAJORMINOR}/modules"])
 
 AC_SUBST(modlibexecdir)
-
-#### UDEV support (optional) ####
-AC_ARG_ENABLE([udev],
-    AS_HELP_STRING([--disable-udev],[Disable optional UDEV support]))
-
-AS_IF([test "x$enable_udev" != "xno"],
-    [PKG_CHECK_MODULES(UDEV, [ libudev >= 143 ], HAVE_UDEV=1, HAVE_UDEV=0)],
-    HAVE_UDEV=0)
-
-AS_IF([test "x$enable_udev" = "xyes" && test "x$HAVE_UDEV" = "x0"],
-    [AC_MSG_ERROR([*** UDEV support not found])])
-
-AC_SUBST(UDEV_CFLAGS)
-AC_SUBST(UDEV_LIBS)
-AC_SUBST(HAVE_UDEV)
-AM_CONDITIONAL([HAVE_UDEV], [test "x$HAVE_UDEV" = x1])
-AS_IF([test "x$HAVE_UDEV" = "x1"], AC_DEFINE([HAVE_UDEV], 1, [Have UDEV.]))
-
 
 ############################################
 # Droid device type

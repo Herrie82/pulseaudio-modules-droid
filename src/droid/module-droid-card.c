@@ -63,12 +63,8 @@
 #include <droid/sllist.h>
 #include "droid-sink.h"
 #include "droid-source.h"
- 
-#ifdef HAVE_UDEV
 #include "droid-extcon.h"
-#endif
-
-#include "module-droid-card-symdef.h"
+#include "droid-extevdev.h"
 
 PA_MODULE_AUTHOR("Juho Hämäläinen");
 PA_MODULE_DESCRIPTION("Droid card");
@@ -86,6 +82,7 @@ PA_MODULE_USAGE(
         "config=<location for droid audio configuration> "
         "voice_property_key=<proplist key searched for sink-input that should control voice call volume> "
         "voice_property_value=<proplist value for the key for voice control sink-input> "
+        "voice_virtual_stream=<true/false> create virtual stream for voice call volume control (default false)"
         "default_profile=<boolean. create default profile for primary module or not. defaults to true> "
         "merge_inputs=<unused, always true> "
         "quirks=<comma separated list of quirks to enable/disable>"
@@ -119,6 +116,7 @@ static const char* const valid_modargs[] = {
     "config",
     "voice_property_key",
     "voice_property_value",
+    "voice_virtual_stream",
     "default_profile",
     "combine",
     "merge_inputs",
@@ -163,10 +161,9 @@ struct userdata {
     pa_droid_card_data card_data;
 
     pa_card_profile *real_profile;
- 
-#ifdef HAVE_UDEV
+
     pa_droid_extcon *extcon;
-#endif
+    pa_droid_extevdev *extevdev;
 
     pa_modargs *modargs;
     pa_card *card;
@@ -875,10 +872,12 @@ int pa__init(pa_module *m) {
 
     pa_card_choose_initial_profile(u->card);
     init_profile(u);
- 
-#ifdef HAVE_UDEV
     u->extcon = pa_droid_extcon_new(m->core, u->card);
-#endif
+
+    if (!u->extcon)
+        u->extevdev = pa_droid_extevdev_new(m->core, u->card);
+    else
+        u->extevdev = NULL;
 
     pa_card_put(u->card);
 
@@ -908,10 +907,11 @@ void pa__done(pa_module *m) {
         if (u->card && u->card->sources)
             pa_idxset_remove_all(u->card->sources, (pa_free_cb_t) pa_droid_source_free);
 
-#ifdef HAVE_UDEV
         if (u->extcon)
             pa_droid_extcon_free(u->extcon);
-#endif
+
+        if (u->extevdev)
+            pa_droid_extevdev_free(u->extevdev);
 
         if (u->card)
             pa_card_free(u->card);
