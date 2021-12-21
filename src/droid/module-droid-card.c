@@ -63,6 +63,10 @@
 #include <droid/sllist.h>
 #include "droid-sink.h"
 #include "droid-source.h"
+ 
+#ifdef HAVE_UDEV
+#include "droid-extcon.h"
+#endif
 
 PA_MODULE_AUTHOR("Juho Hämäläinen");
 PA_MODULE_DESCRIPTION("Droid card");
@@ -157,6 +161,10 @@ struct userdata {
     pa_droid_card_data card_data;
 
     pa_card_profile *real_profile;
+ 
+#ifdef HAVE_UDEV
+    pa_droid_extcon *extcon;
+#endif
 
     pa_modargs *modargs;
     pa_card *card;
@@ -845,6 +853,11 @@ int pa__init(pa_module *m) {
 
     pa_card_choose_initial_profile(u->card);
     init_profile(u);
+ 
+#ifdef HAVE_UDEV
+    u->extcon = pa_droid_extcon_new(m->core, u->card);
+#endif
+
     pa_card_put(u->card);
 
     return 0;
@@ -871,6 +884,10 @@ void pa__done(pa_module *m) {
         if (u->card && u->card->sources)
             pa_idxset_remove_all(u->card->sources, (pa_free_cb_t) pa_droid_source_free);
 
+#ifdef HAVE_UDEV
+        if (u->extcon)
+            pa_droid_extcon_free(u->extcon);
+#endif
 
         if (u->card)
             pa_card_free(u->card);
